@@ -19,6 +19,22 @@ class TrucksInfo:
         self.completeness_model_level = None
         self.completeness_brand_level = None
 
+    def start_over(self):
+        'Starts over model input after brand selection'
+        self.brands_list = []
+        self.n_trucks_brand = None
+        self.brand_same_model = None
+        self.trucks_list = []
+        self.completeness_model_level = None
+        self.completeness_brand_level = None
+
+    def start_over_brand(self, i_brand):
+        brand = self.brands_list[i_brand]
+        self.n_trucks_brand[i_brand] = None
+        self.brand_same_model[i_brand] = None
+        self.trucks_list = [t in self.trucks_list if t[0].brand != brand]
+        # TODO:Completeness
+        
     def pretty_print(self):
         'Print out information collected in chat session'
         print("Summary of collected trucks information:")
@@ -128,18 +144,20 @@ def ask_trucks_start(trucks_info):
     trucks_info.n_trucks_brand = [None] * len(trucks_info.brands_list)
     trucks_info.brand_same_model = [None] * len(trucks_info.brands_list)
 
-    #trucks_info.brand_model_list = [] * len(trucks_info.brands_list)
     return make_ask_brand_trucks(trucks_info, 0) # Next action: Ask about first truck brand
 
 def check_for_correction(s):
     'If input s implies correction, return respective function. Otherwise return False.'
     if(blandify_str(s) == 'start over'):
-        # TODO: Reset
+        # Reset
+        trucks_info.start_over()
         return ask_trucks_start
+
     if(blandify_str(s).startswith('correct ')):
         for i, b in enumerate(trucks_info.brands_list):
             if blandify_str(s)[8:] == b:
-                # TODO: Reset
+                # Reset
+                trucks_info.start_over_brand(i)
                 return make_ask_brand_trucks(trucks_info, i)
         print("I did not recognize the brand you want to correct.")
         return False
