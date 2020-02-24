@@ -1,0 +1,8 @@
+name: tracks_chatbot
+channels:
+  - defaults
+dependencies:
+  - python
+  - inflect
+  - flake8
+  - rope

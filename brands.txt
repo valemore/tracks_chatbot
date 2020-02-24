@@ -1,0 +1,401 @@
+ACMAT
+AEC
+Albion
+Alfa Romeo
+Argyle
+Armstrong-Saurer
+Askam
+Astra
+Atkinson
+Austin
+Automiesse
+Avia
+Avtomobilnoe Moskovskoe Obshchestvo
+AMO
+AWD
+Barkas
+Baron
+Barreiros
+Bean
+Beardmore
+Bedford
+BelAZ
+Belsize
+Berliet
+Berliet-Tramagal
+Berna
+BMC
+Bristol
+Isuzu
+Isuzu
+Mitsubishi
+Mitsubishi Fuso
+Hino
+British Motor Corporation
+BMC
+Brossel
+Bucegi
+Büssing
+Borgward
+Bruce-SN
+Carmichael
+Caledon
+Chavdar
+Chenard-Walcker
+Citroën
+Commer
+Crossley
+Csepel
+DAC
+DAF
+Daimler AG
+De Dion-Bouton
+Delahaye
+Dennis
+Dennis UD
+Dennis Eagle
+Dennis-Mann Egerton
+Dennison
+Dodge
+Douglas
+Ebro
+ELVO
+ELM Trucking
+ERF
+FAP
+FAR
+FBW
+Fiat
+Foden
+Ford
+Ford
+Fowler
+FTF
+GA
+Gaz
+Garner
+Garrett
+Gilford
+Ginaf
+Gräf
+Gräf and Stift
+Gräf & Stift
+Grube
+GV
+Guy
+Halley
+Hallford
+Hanomag
+Hardy
+Haulamatic
+Henschel
+HHT
+Hispano-Suiza
+Horch
+Hotchkiss
+HSG
+IFA
+Iveco
+Jelcz
+Jensen
+Kaelble
+Kalmar
+Kamaz
+Karrier
+Kerr Stuart
+KrAZ
+Kromhout
+KAZ
+Labourier
+Lacre
+Lancia
+Latil
+Leyland
+Leyland DAF
+Loheac
+Lomount
+Lorraine-Dietrich
+LAZ
+LIAZ
+Madara
+Magirus
+Mahendra
+Manchester
+Mann
+MAN
+Maudslay
+McCurd
+Minerva
+MAZ
+Mercedes-Benz
+MTZ
+Morris
+Morris Commercial
+Mowag
+Motor Traction
+Multicar
+Multiwheeler
+MZKT
+Namco
+Neobus
+Nibus
+Nicolas
+Norde
+ÖAF
+Officine Meccaniche
+Officine Meccaniche Tortonesi
+Opel
+Otosan
+Pagefield
+Panhard
+Paul Nutzfahrzeuge
+Pegaso
+Peugeot
+Praga
+Preslav
+Proctor
+Quest
+Raba
+Renault
+Robur
+Roman
+Rotinoff
+Rowe-Hillmaster
+Rutland
+Saurer
+Saviem
+Scammell
+Scania
+SD
+Seddon
+Seddon Atkinson
+Sentinel
+Shefflex
+Sides
+Simca
+Sisu Auto
+Škoda
+Somua
+Star
+Star
+Steyr
+Straker-Squire
+Straussler
+Tadano Faun GmbH
+TAM
+Tata
+Tatra
+Terberg
+Temax
+Thornycroft
+Tilling Stevens
+Titan
+Tonar
+TVM
+TVW
+TVS Motar France
+Unic
+Unimog
+Union
+Unipower
+USG-Pitt
+Ural
+URO
+Vanaja
+Verheul
+Volkswagen Commercial Vehicles
+Volvo
+Vomag
+Vulcan
+Willeme
+Yarovit
+Yorkshire
+Zastava
+ZiL
+Zwicky
+Askam
+Ashok Leyland
+Asia MotorWorks
+AIL
+Beiqi Foton
+BMC
+BYD Company
+Chery
+Chingkangshan
+Daewoo
+Daihatsu
+Daimler India
+Dodge
+DMC
+Cummins
+Nissan Diesel
+Eicher
+Fargo
+FAW
+Force
+GA
+Genoto
+Ghandhara Industries
+HEPCO
+Hindustan
+Hino
+Hinopak
+Howo
+Hohan
+Hualing Xingma Automobile
+Yellow River
+Hyundai
+Isuzu
+Jianghuai Automobile
+Jiaotong
+Jiefang
+KAZ
+KMC
+Komatsu
+Mahindra
+Master
+Matra Fire
+Mitsubishi Fuso
+New Sentosa CV
+Nissan Diesel
+Nissian
+Minsei
+Nissian/Minsei
+Otokar
+Otosan
+Perkasa Truck
+Premier
+Shaanxi
+Shacman
+Sitrak
+Sitom
+Swaraj Mazda
+Tata Daewoo
+Tata
+TVS
+Sinotruk
+UD
+Jabalpur
+XCMG
+Yuejin
+Zeber
+Ziyang Nanjun
+Amico
+Azar
+Dand
+Etesal
+Kaveh
+Saipa
+Arya
+Khodro
+Arna
+Persika
+American Coleman
+American LaFrance
+Autocar
+Available
+Bailey
+Bering
+Brockway
+Brown
+Canada
+Crane
+Crane Carrier Corporation
+Chevrolet
+Cline
+Colet
+Corbitt
+Dart
+DeSoto
+Diamond T
+Dina
+Dodge
+E-One
+Fageol
+Flextruc
+Ford
+Freeman
+Federal
+Freightliner
+FWD Auto Company
+Gersix
+GMC
+GM
+General Motors
+General Motors Canada
+Gotfredson
+Greenkraft
+General Vehicle
+Hayes Truck
+Hendrickson
+Hino
+Hug
+Ibex
+International
+Isuzu
+Jarrett
+Jeffedry Quad
+Kenworth
+Knox
+Liberty
+Mack
+Marmon-Herrington
+Marmon
+Mitsubishi Fuso
+Moreland
+Nissan
+Orange EV
+Oshkosh
+Kalmar Industries
+Paccar
+Paymaster
+Peterbilt
+Pierce
+Ramirez
+Rapid
+Relay
+Reo
+Republic
+Riker
+Spangler
+Stewart
+Sterling
+Studebaker
+Scot
+Tesla
+Traffic
+UD
+Volvo
+Walter
+White
+Western Star
+Zeligson
+Agrale
+Volkswagen
+VW
+Volkswagen
+AVM
+Mahendra
+Tata
+Ralph
+SAMIL
+SNVI
+UD
+Uri
+Volvo
+Caterpillar
+DAF
+Freightliner
+Hino
+Isuzu
+Iveco
+Kenworth
+Mack
+Mercedes
+Mercedes-Benz
+Mitsubishi Fuso
+RFW
+Scania
+UD
+Volvo
+Western Star
