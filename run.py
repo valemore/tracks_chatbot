@@ -3,8 +3,7 @@ import re
 
 from trucks_nlp import is_yes_answer, is_no_answer, sanitize_int, sanitize_float, blandify_str, get_brands, find_brand
 
-customers_file = 'customers.jsonl' # Stores customer data as lines of customer records
-trucks_file = 'trucks.jsonl' # Stores trucks data as lines of json records
+data_file = 'data.jsonl' # Where to store the collected data
 brands_file = 'brands.txt' # List of brand names
 
 class TrucksInfo:
@@ -14,15 +13,14 @@ class TrucksInfo:
         self.company = None             # Client company                        String
         self.n_trucks = None            # Total number of trucks                Integer
         self.brands_list = []           # List of brands among client's trucks  List[String]
-        self.n_trucks_brand = None     # Number of trucks for that brand       List[Integer]
+        self.n_trucks_brand = None      # Number of trucks for that brand       List[Integer]
         self.brand_same_model = None    # Only one model for that brand?        List[Boolean]
-        #self.brand_n_models = None      # Number of models for that brand       List[Integer]
-        #self.brand_model_list = []      # List models for that brand            List[List[String]]
         self.trucks_list = []           # List of truck models and their number List[Tuple(TruckSpec, Integer)]
         self.completeness_model_level = None
         self.completeness_brand_level = None
 
     def pretty_print(self):
+        'Print out information collected in chat session'
         print("Summary of collected trucks information:")
         print("----------------------------------------")
         print(f"Name: {self.name}")
@@ -45,6 +43,21 @@ class TrucksInfo:
                 print(f"\t\tAxle Number: {t[0].axle_number}")
                 print(f"\t\tWeight: {t[0].weight}")
                 print(f"\t\tMax load: {t[0].max_load}")
+    
+    def to_json(self):
+        'Serialize to json'
+        trucks_list = []
+        for t in self.trucks_list:
+            t_dict = t[0].__dict__
+            t_dict['n_trucks'] = t[1]
+            trucks_list.append(t_dict)
+        data_dict = {
+            'name':self.name,
+            'company':self.company,
+            'total_trucks':self.n_trucks,
+            'trucks':trucks_list
+        }
+        return json.dumps(data_dict)
 
 class TruckSpec:
     'Holds specification for a truck model'
@@ -56,34 +69,16 @@ class TruckSpec:
         self.axle_number = None         # Integer
         self.weight = None              # Float (Unit: tons)
         self.max_load = None            # Float (Unit: tons)
+    
+    def __repr__(self):
+        return repr(self.__dict__)
 
 def ask_name_company(trucks_info):
     'Asks for name and company information, saves it to customer file.'
     trucks_info.name = input("Hello, what's your name? ")
     trucks_info.company = input(f"Hi {trucks_info.name}, what's the name of your company? ")
-    create_customer(name=trucks_info.name,
-                    company=trucks_info.company,
-                    customers_file=customers_file)
 
-    return ask_trucks # Next action: Ask about trucks
-
-def create_customer(name, company, customers_file):
-    'Creates a customer record in customers_file.'
-    n_customers = 0
-    try:
-        with open(customers_file, 'r+') as f:
-            for l in f:
-                n_customers += 1
-    except FileNotFoundError:
-        print(f'{customers_file} not found, creating it...')
-    
-    new_customer_dict = {
-        'name':name,
-        'company':company,
-        'customer_id':1000+n_customers
-    }
-    with open(customers_file, 'a') as f:
-        f.write(json.dumps(new_customer_dict) + '\n')
+    return ask_trucks       # Next action: Ask about trucks
 
 def ask_trucks(trucks_info):
     'Asks whether user owns trucks'
@@ -91,7 +86,8 @@ def ask_trucks(trucks_info):
     if is_yes_answer(trucks_yesno):
         return ask_how_many  # Next action: Ask about number of trucks
     elif is_no_answer(trucks_yesno):
-        print("Ok, I only created a customer record then. Bye!")
+        trucks_info.n_trucks = 0
+        print("Ok, that was easy :) Bye!")
         return None          # Next action: None (We are done)
     else:
         print("I am not sure I understood you. Let's try again.")
@@ -103,6 +99,9 @@ def ask_how_many(trucks_info):
     try:
         trucks_info.n_trucks = sanitize_int(answer_how_many)
         trucks_info.completeness_brand_level = 0
+        if trucks_info.n_trucks == 0:
+            print("Ok, that was easy :) Bye!")
+            return None     # Next action: None (We are done)
         return ask_brands   # Next action: ask about brands
     except ValueError:
         print("That does not look like a number to me. Let's try again.")
@@ -233,7 +232,7 @@ def ask_model_details(trucks_info, i_brand, model_name):
     
     def ask_model_engine_size():
         engine_size_input = input(f"What is the engine size for the {model_name} model [default unit: litres]? ")
-        pat = re.compile("^\s*(\d+)\s*(l|litres|liters|litre|cc|cm³)?\s*$")
+        pat = re.compile(r"^\s*(\d+)\s*(l|litres|liters|litre|cc|cm³)?\s*$")
         match = pat.match(engine_size_input)
         if match is None:
             print("Engine size must given as number with optional unit - either cc or litres")
@@ -271,11 +270,15 @@ def ask_model_details(trucks_info, i_brand, model_name):
     def ask_model_weight():
         try:
             weight_input = input(f"How much does the {model_name} weigh (in tons)? ")
-            pat = re.compile("^(.*)(t|tons)?\s*$")
+            pat = re.compile(r"^(.*)(t|tons)?\s*$")
             weight_input = pat.match(weight_input).group(1)     
             weight = sanitize_float(weight_input)
-            truck_spec.weight = weight
-            return None               # Next action: Done
+            if weight < 0 or weight > 20:
+                print("Weight seems to be too high or low, please check!")
+                return ask_model_weight
+            else:
+                truck_spec.weight = weight
+                return None               # Next action: Done
         except ValueError:
             print("That does not look like a number to me. Let's try again.")
             return ask_model_weight # Next action: ask again about number of trucks
@@ -283,11 +286,15 @@ def ask_model_details(trucks_info, i_brand, model_name):
     def ask_model_max_load():
         try:
             max_load_input = input(f"What is the max load for the {model_name} model (in tons)? ")
-            pat = re.compile("^(.*)(t|tons)?\s*$")
+            pat = re.compile(r"^(.*)(t|tons)?\s*$")
             max_load_input = pat.match(max_load_input).group(1)     
             max_load = sanitize_float(max_load_input)
-            truck_spec.max_load = max_load
-            return None               # Next action: Done
+            if max_load < 0 or max_load > 20:
+                print("Max load seems to be too high or low, please check!")
+                return ask_model_max_load
+            else:
+                truck_spec.max_load = max_load
+                return None               # Next action: Done
         except ValueError:
             print("That does not look like a number to me. Let's try again.")
             return ask_model_max_load # Next action: ask again about number of trucks
@@ -365,4 +372,9 @@ trucks_info = TrucksInfo()
 while next_action:
     next_action = next_action(trucks_info)
 
+# Print info to console
 trucks_info.pretty_print()
+
+# Write info to file
+with open(data_file, 'a') as f:
+    f.write(trucks_info.to_json() + '\n')
