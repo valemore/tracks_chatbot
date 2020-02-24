@@ -86,7 +86,7 @@ def find_brand(s, brands_list):
     def find_brand_iter(tokens):
         # We look for largest possible group of tokens first
         for i in range(len(tokens)):
-            for j in reversed(range(i, len(tokens))):
+            for j in reversed(range(i+1, len(tokens)+1)):
                 for idx_brand, b in enumerate(brands_list_bland):
                     if ' '.join(tokens[i:j]) == b:
                         # If we find a brand, continue searching recursively on remaining tokens
