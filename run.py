@@ -177,16 +177,17 @@ def make_ask_brand_trucks(trucks_info, i_brand):
 
         try:
             trucks_info.n_trucks_brand[i_brand] = sanitize_int(trucks_brand)
-            if not check_consistency(trucks_info):
-                trucks_info.n_trucks_brand[i_brand] = None
-                print(f"The numbers don't seem to add up. Let me ask you again about the {brand} trucks you have.")
-                return make_ask_brand_trucks(trucks_info, i_brand) # Next action: Ask again
-            else:
-                return make_ask_same_model(trucks_info, i_brand) # Next action: Ask about models for that brand
         except ValueError:
             trucks_info.n_trucks_brand[i_brand] = None
             print("That does not look like a number to me. Let's try again.")
             return make_ask_brand_trucks(trucks_info, i_brand) # Next action: Ask again
+
+        if not check_consistency(trucks_info):
+            trucks_info.n_trucks_brand[i_brand] = None
+            print(f"The numbers don't seem to add up. Let me ask you again about the {brand} trucks you have.")
+            return make_ask_brand_trucks(trucks_info, i_brand) # Next action: Ask again
+        else:
+            return make_ask_same_model(trucks_info, i_brand) # Next action: Ask about models for that brand
 
     if(i_brand >= len(trucks_info.brands_list)): # We asked about all brands already
         print('Looks like I have all the info I need. Bye!')
@@ -207,16 +208,13 @@ def make_ask_same_model(trucks_info, i_brand):
 
         if is_yes_answer(same_model_yes_no):
             trucks_info.brand_same_model[i_brand] = True
-            #trucks_info.brand_n_models = 1
-            #trucks_info.brand_model_list[i_brand] = [None]
-            next_action = ask_brand_models(trucks_info, i_brand) # Next action: Ask about models for that brand (only 1 model)
+            return ask_brand_models(trucks_info, i_brand) # Next action: Ask about models for that brand (only 1 model)
         elif is_no_answer(same_model_yes_no):
             trucks_info.brand_same_model[i_brand] = False
-            next_action = ask_brand_models(trucks_info, i_brand) # Next action: Ask about models for that brand (>1 models)
+            return ask_brand_models(trucks_info, i_brand) # Next action: Ask about models for that brand (>1 models)
         else:
             print("I am not sure I understood you. Let's try again.")
-            next_action = make_ask_same_model(trucks_info, i_brand) # Next action: Try again
-        return next_action
+            return make_ask_same_model(trucks_info, i_brand) # Next action: Try again
     
     return ask_same_model
 
