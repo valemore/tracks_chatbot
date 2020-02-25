@@ -191,6 +191,7 @@ Thornycroft
 Tilling Stevens
 Titan
 Tonar
+Toyota
 TVM
 TVW
 TVS Motar France
@@ -219,6 +220,7 @@ Asia MotorWorks
 AIL
 Beiqi Foton
 BMC
+BMW
 BYD Company
 Chery
 Chingkangshan
