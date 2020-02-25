@@ -141,16 +141,16 @@ def ask_brands(trucks_info):
         print("I did not recognize any brand name. Let's try again.")
         return ask_brands # Next action: Repeat this question
 
-def check_for_correction(s):
-    'If input s implies correction, return respective function. Otherwise return False.'
-    if(blandify_str(s) == 'start over'):
+def check_for_correction(trucks_info, input_str):
+    "If input is either 'start over' or 'correct <brand>', reset and return respective function. Otherwise return False.'
+    if(blandify_str(input_str) == 'start over'):
         # Reset
         trucks_info.start_over()
         return ask_trucks_start
 
-    if(blandify_str(s).startswith('correct ')):
+    if(blandify_str(input_str).startswith('correct ')):
         for i, b in enumerate(trucks_info.brands_list):
-            if blandify_str(s)[8:] == blandify_str(b):
+            if blandify_str(input_str)[8:] == blandify_str(b):
                 # Reset
                 trucks_info.start_over_brand(i)
                 return make_ask_brand_trucks(trucks_info, i)
@@ -184,8 +184,8 @@ def make_ask_brand_trucks(trucks_info, i_brand):
             trucks_brand = input(f"How many {brand} trucks do you have? ")
 
             # Check for correction
-            if check_for_correction(trucks_brand):
-                return check_for_correction(trucks_brand)
+            if check_for_correction(trucks_info, trucks_brand):
+                return check_for_correction(trucks_info, trucks_brand)
 
             # Sanitizing for integer input (Number of trucks per brand)
             try:
@@ -222,8 +222,8 @@ def make_ask_same_model(trucks_info, i_brand):
 
         same_model_yes_no = input(f"Are your {brand} trucks of the same model? ")
         # Check for correction
-        if check_for_correction(same_model_yes_no):
-            return check_for_correction(same_model_yes_no)
+        if check_for_correction(trucks_info, same_model_yes_no):
+            return check_for_correction(trucks_info, same_model_yes_no)
 
         if is_yes_answer(same_model_yes_no):
             trucks_info.brand_same_model[i_brand] = True
@@ -248,8 +248,8 @@ def ask_brand_models(trucks_info, i_brand):
             return ask_brand_models(trucks_info, i_brand)
        
     # Check for correction
-    if check_for_correction(next_model):
-        return check_for_correction(next_model)
+    if check_for_correction(trucks_info, next_model):
+        return check_for_correction(trucks_info, next_model)
 
     if not trucks_info.brand_same_model[i_brand] and is_no_answer(next_model):
         if check_consistency(trucks_info):
