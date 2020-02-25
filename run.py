@@ -15,6 +15,7 @@ class TrucksInfo:
         self.brands_list = []           # List of brands among client's trucks  List[String]
         self.n_trucks_brand = None      # Number of trucks for that brand       List[Integer]
         self.brand_same_model = None    # Only one model for that brand?        List[Boolean]
+        self.brand_models = [[]]        # List of truck models for that brand   List[String]
         self.trucks_list = []           # List of truck models and their number List[Tuple(TruckSpec, Integer)]
         self.completeness = None
 
@@ -23,6 +24,7 @@ class TrucksInfo:
         self.brands_list = []
         self.n_trucks_brand = [None] * len(self.brands_list)
         self.brand_same_model = [None] * len(self.brands_list)
+        self.brand_models = [[]] * len(self.brands_list)
         self.trucks_list = []
         self.completeness = [0] * len(self.brands_list)
 
@@ -31,6 +33,7 @@ class TrucksInfo:
         brand = self.brands_list[i_brand]
         self.n_trucks_brand[i_brand] = None
         self.brand_same_model[i_brand] = None
+        self.brand_models[i_brand] = []
         self.trucks_list = [t for t in self.trucks_list if t[0].brand != brand]
         self.completeness[i_brand] = 0
         
@@ -162,6 +165,7 @@ def ask_trucks_start(trucks_info):
     # Now that we know number of brands, we can initialize these
     trucks_info.n_trucks_brand = [None] * len(trucks_info.brands_list)
     trucks_info.brand_same_model = [None] * len(trucks_info.brands_list)
+    trucks_info.brand_models = [[]] * len(trucks_info.brands_list)
     trucks_info.completeness = [0] * len(trucks_info.brands_list)
 
     return make_ask_brand_trucks(trucks_info, 0) # Next action: Ask about first truck brand
@@ -173,32 +177,39 @@ def make_ask_brand_trucks(trucks_info, i_brand):
         brand = trucks_info.brands_list[i_brand]
         print(f"I will now ask you about your {brand} trucks. If you want to correct your input for your {brand} trucks, tell me 'correct {brand}'")
 
-        trucks_brand = input(f"How many {brand} trucks do you have? ")
-
-        # Check for correction
-        if check_for_correction(trucks_brand):
-            return check_for_correction(trucks_brand)
-
-        # Sanitizing for integer input (Number of trucks per brand)
-        try:
-            trucks_info.n_trucks_brand[i_brand] = sanitize_int(trucks_brand)
-        except ValueError:
-            #trucks_info.n_trucks_brand[i_brand] = None
-            print("That does not look like a number to me. Let's try again.")
-            return make_ask_brand_trucks(trucks_info, i_brand) # Next action: Ask again
-
-        if not check_consistency(trucks_info):
-            trucks_info.n_trucks_brand[i_brand] = None
-            print(f"The numbers don't seem to add up. Let me ask you again about the {brand} trucks you have.")
-            return make_ask_brand_trucks(trucks_info, i_brand) # Next action: Ask again
+        if(len(trucks_info.brands_list) == 1):  # We don't need to ask if we only have one brand
+            print(f"It seems that all your {trucks_info.n_trucks} trucks are {brand} trucks.")
+            trucks_info.n_trucks_brand[i_brand] = trucks_info.n_trucks
         else:
-            return make_ask_same_model(trucks_info, i_brand) # Next action: Ask about models for that brand
+            trucks_brand = input(f"How many {brand} trucks do you have? ")
+
+            # Check for correction
+            if check_for_correction(trucks_brand):
+                return check_for_correction(trucks_brand)
+
+            # Sanitizing for integer input (Number of trucks per brand)
+            try:
+                trucks_info.n_trucks_brand[i_brand] = sanitize_int(trucks_brand)
+            except ValueError:
+                #trucks_info.n_trucks_brand[i_brand] = None
+                print("That does not look like a number to me. Let's try again.")
+                return make_ask_brand_trucks(trucks_info, i_brand) # Next action: Ask again
+
+            if not check_consistency(trucks_info):
+                trucks_info.n_trucks_brand[i_brand] = None
+                print(f"The numbers don't seem to add up. Let me ask you again about the {brand} trucks you have.")
+                return make_ask_brand_trucks(trucks_info, i_brand) # Next action: Ask again
+
+        return make_ask_same_model(trucks_info, i_brand) # Next action: Ask about models for that brand
 
     if(i_brand >= len(trucks_info.brands_list)): # We asked about all brands already
         print('Looks like I have all the info I need. Bye!')
         return None # We are done
 
     if(check_completeness(trucks_info, i_brand)): # We already have info for this brand
+        if not trucks_info.brand_same_model[i_brand] and len(trucks_info.brand_models[i_brand]) == 1: # Notify user and change brand_same_model if user changed his mind
+            print(f"Before you told me you have more than one model. No problem, it's ok to change your mind.")
+            trucks_info.brand_same_model[i_brand] = True
         return make_ask_brand_trucks(trucks_info, i_brand+1)  # Next action: Ask about next brand
     
     return ask_brand_trucks
@@ -231,8 +242,11 @@ def ask_brand_models(trucks_info, i_brand):
     if trucks_info.brand_same_model[i_brand]:
         next_model = input(f"What is the model of your {brand} trucks? ")
     else:
-        next_model = input(f"What is the next model among your {brand} trucks (Answer none if you have no more models)? ")
-    
+        next_model = input(f"What is model #{len(trucks_info.brand_models[i_brand])+1} among your {brand} trucks (Answer none if you have no more models)? ")
+        if next_model in trucks_info.brand_models[i_brand]:
+            print(f"It looks like you already told me about your {brand} {next_model} model trucks! Let's try again.")
+            return ask_brand_models(trucks_info, i_brand)
+       
     # Check for correction
     if check_for_correction(next_model):
         return check_for_correction(next_model)
@@ -240,14 +254,17 @@ def ask_brand_models(trucks_info, i_brand):
     if not trucks_info.brand_same_model[i_brand] and is_no_answer(next_model):
         if check_consistency(trucks_info):
             if check_completeness(trucks_info, i_brand):
+                if len(trucks_info.brand_models[i_brand]) == 1:             # Notify user and change brand_same_model if user changed his mind
+                    print(f"Before you told me you have more than one model. No problem, it's ok to change your mind.")
+                    trucks_info.brand_same_model[i_brand] = True
                 return make_ask_brand_trucks(trucks_info, i_brand+1)        # Next action: Ask about next brand
             else:
                 print(f"We are missing information for brand {trucks_info.brands_list[i_brand]}!")
         print("The numbers don't add up. Let's try again.")
-        return ask_brand_models(trucks_info, i_brand)                # Next action: Repeat this one
-    else:
-        #trucks_info.brand_n_models += 1                                 # Increase counter for number of models
-        return ask_model_details(trucks_info, i_brand, next_model)      # Next action: Ask about model details
+        return ask_brand_models(trucks_info, i_brand)               # Next action: Repeat this one
+    
+    trucks_info.brand_models[i_brand].append(next_model)            # Add model to list of models for next prompt
+    return ask_model_details(trucks_info, i_brand, next_model)      # Next action: Ask about model details
 
 
 def ask_model_details(trucks_info, i_brand, model_name):
@@ -259,14 +276,14 @@ def ask_model_details(trucks_info, i_brand, model_name):
     
     def ask_model_engine_size():
         engine_size_input = input(f"What is the engine size for the {model_name} model [default unit: litres]? ")
-        pat = re.compile(r"^\s*(\d+)\s*(l|litres|liters|litre|cc|cm³)?\s*$")
+        pat = re.compile(r"^(.*)(l|litres|liters|litre|cc|cm³)?\s*$")
         match = pat.match(engine_size_input)
         if match is None:
             print("Engine size must given as number with optional unit - either cc or litres")
             return ask_model_engine_size
         
         try:
-            engine_size = sanitize_int(match.group(1))
+            engine_size = sanitize_float(match.group(1))
         except ValueError:
             print("That does not look like a number to me. Let's try again.")
             return ask_model_engine_size # Next action: ask again about number of trucks
@@ -300,7 +317,7 @@ def ask_model_details(trucks_info, i_brand, model_name):
             pat = re.compile(r"^(.*)(t|tons)?\s*$")
             weight_input = pat.match(weight_input).group(1)     
             weight = sanitize_float(weight_input)
-            if weight < 0 or weight > 20:
+            if weight < 0 or weight > 80:
                 print("Weight seems to be too high or low, please check!")
                 return ask_model_weight
             else:
@@ -316,7 +333,7 @@ def ask_model_details(trucks_info, i_brand, model_name):
             pat = re.compile(r"^(.*)(t|tons)?\s*$")
             max_load_input = pat.match(max_load_input).group(1)     
             max_load = sanitize_float(max_load_input)
-            if max_load < 0 or max_load > 20:
+            if max_load < 0 or max_load > 80:
                 print("Max load seems to be too high or low, please check!")
                 return ask_model_max_load
             else:
@@ -364,6 +381,9 @@ def ask_model_details(trucks_info, i_brand, model_name):
         if not check_completeness(trucks_info, i_brand):
             return ask_brand_models(trucks_info, i_brand)           # Next action: Ask about next model for same brand
         else:
+            if not trucks_info.brand_same_model[i_brand] and len(trucks_info.brand_models[i_brand]) == 1: # Notify user and change brand_same_model if user changed his mind
+                print(f"Before you told me you have more than one model. No problem, it's ok to change your mind.")
+                trucks_info.brand_same_model[i_brand] = True
             return make_ask_brand_trucks(trucks_info, i_brand+1)     # Next action: Ask about next models for next brand
 
 

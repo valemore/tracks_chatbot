@@ -3,8 +3,8 @@
 import inflect
 
 # Some alternatives for yes/no answers
-yes_answers = "yes, y, yep, yup"
-no_answers = "no, n, none, nope, zero"
+yes_answers = ["yes", "y", "yep", "yup", "ya", "ja"]
+no_answers = ["no", "n", "none", "nope", "nein", "zero", "no more"]
 
 def is_yes_answer(s):
     if s.lower() in yes_answers:
@@ -95,7 +95,6 @@ def find_brand(s, brands_list):
         # Return empty list if no match was found
         return []
     
-    return find_brand_iter(s_tokenized)
+    result = find_brand_iter(s_tokenized)
+    return list(set(result))
 
-    # Return empty list if no match was found
-    return []
