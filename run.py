@@ -14,6 +14,7 @@ log_file_base = f'{current_time}.log'
 log_file, suffix = log_file_base, 1
 while os.path.exists(log_file):
     log_file = f'{log_file_base}_{suffix}'
+    suffix += 1
 
 class TrucksInfo:
     'Holds complete information of a chat session'
@@ -26,7 +27,7 @@ class TrucksInfo:
         self.brand_same_model = None    # Only one model for that brand?        List[Boolean]
         self.brand_models = [[]]        # List of truck models for that brand   List[String]
         self.trucks_list = []           # List of truck models and their number List[Tuple(TruckSpec, Integer)]
-        self.completeness = None
+        self.completeness = None        # Counts number of trucks for brands    List[Integer]
 
     def start_over(self):
         'Starts over input after brand selection'
@@ -100,7 +101,20 @@ class TruckSpec:
     def __repr__(self):
         return repr(self.__dict__)
 
-# Prompts
+# BOT INPUT AND OUTPUT
+
+def bot_input(outfile, prompt_str):
+    with open(outfile, 'a') as f:
+        f.write('BOT: ' + prompt_str + '\n')
+        input_str = input(prompt_str)
+        f.write('USER: ' + input_str + '\n')
+    return input_str
+
+def bot_output(outfile, output_str):
+    print(output_str)
+    with open(outfile, 'a') as f:
+        f.write('BOT: ' + output_str + '\n')
+
 def bot_input_ready_for_correction(outfile, trucks_info, prompt_str):
     input_str = bot_input(outfile, trucks_info, prompt_str)
     if(blandify_str(input_str) == 'start over'):
@@ -118,20 +132,12 @@ def bot_input_ready_for_correction(outfile, trucks_info, prompt_str):
 
     return input_str
 
-def bot_input(outfile, prompt_str):
-    with open(outfile, 'a') as f:
-        f.write('BOT: ' + prompt_str + '\n')
-        input_str = input(prompt_str)
-        f.write('USER: ' + input_str + '\n')
-    return input_str
-
-def bot_output(outfile, output_str):
-    print(output_str)
-    with open(outfile, 'a') as f:
-        f.write('BOT: ' + output_str + '\n')
+# BOT DIALOGUE FUNCTIONS
+# All dialogue functions save data in trucks_info
+# Every dialogue function returns the function where the conversation flows next
 
 def ask_name_company(trucks_info):
-    'Asks for name and company information, saves it to customer file.'
+    'Asks for name and company information'
     trucks_info.name = bot_input(log_file, "Hello, what's your name? ")
     trucks_info.company = bot_input(log_file, f"Hi {trucks_info.name}, what's the name of your company? ")
 
@@ -156,16 +162,21 @@ def ask_how_many(trucks_info):
 
     # Sanitize integer input (Total number of trucks)
     try:
-        trucks_info.n_trucks = sanitize_int(answer_how_many)
+        n_trucks = sanitize_int(answer_how_many)
     except ValueError:
         bot_output(log_file, "That does not look like a number to me. Let's try again.")
         return ask_how_many # Next action: ask again about number of trucks
+
+    if n_trucks < 0:
+        bot_output(log_file, "Nice try, but I will not fall for negative trucks!")
+        return ask_how_many # Next action: ask again about number of trucks
+
+    trucks_info.n_trucks = n_trucks
 
     if trucks_info.n_trucks == 0:
         bot_output(log_file, "Ok, that was easy :) Bye!")
         return None     # Next action: None (We are done)
     return ask_brands   # Next action: ask about brands
-
 
 def ask_brands(trucks_info):
     'Asks about brands'
