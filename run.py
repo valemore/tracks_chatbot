@@ -133,7 +133,7 @@ def bot_output(outfile, output_str):
 def ask_name_company(trucks_info):
     'Asks for name and company information, saves it to customer file.'
     trucks_info.name = bot_input(log_file, "Hello, what's your name? ")
-    trucks_info.company = input(f"Hi {trucks_info.name}, what's the name of your company? ")
+    trucks_info.company = bot_input(log_file, f"Hi {trucks_info.name}, what's the name of your company? ")
 
     return ask_trucks       # Next action: Ask about trucks
 
@@ -214,6 +214,13 @@ def make_ask_brand_trucks(trucks_info, i_brand):
     def ask_brand_trucks(trucks_info):
         'Asks about i_brand-th brand'
         brand = trucks_info.brands_list[i_brand]
+
+        # (Re)set variables
+        trucks_info.n_trucks_brand[i_brand] = None
+        trucks_info.brand_same_model[i_brand] = None
+        trucks_info.brand_models[i_brand] = []
+        trucks_info.completeness[i_brand] = 0
+
         bot_output(log_file, f"I will now ask you about your {brand} trucks. If you want to correct your input for your {brand} trucks, tell me 'correct {brand}'")
 
         if(len(trucks_info.brands_list) == 1):  # We don't need to ask if we only have one brand
