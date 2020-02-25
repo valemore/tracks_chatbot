@@ -3,7 +3,7 @@ import os
 import re
 import time
 
-from trucks_nlp import is_yes_answer, is_no_answer, sanitize_int, sanitize_float, blandify_str, get_brands, find_brand
+from trucks_nlp import is_yes_answer, is_no_answer, sanitize_int, sanitize_float, sanitize_str, blandify_str, get_brands, find_brand
 
 data_file = 'data.jsonl' # Where to store the collected data
 brands_file = 'brands.txt' # List of brand names
@@ -31,7 +31,6 @@ class TrucksInfo:
 
     def start_over(self):
         'Starts over input after brand selection'
-        self.brands_list = []
         self.n_trucks_brand = [None] * len(self.brands_list)
         self.brand_same_model = [None] * len(self.brands_list)
         self.brand_models = [[]] * len(self.brands_list)
@@ -104,6 +103,7 @@ class TruckSpec:
 # BOT INPUT AND OUTPUT
 
 def bot_input(outfile, prompt_str):
+    'Wrapper around input for logging to outfile'
     with open(outfile, 'a') as f:
         f.write('BOT: ' + prompt_str + '\n')
         input_str = input(prompt_str)
@@ -111,37 +111,39 @@ def bot_input(outfile, prompt_str):
     return input_str
 
 def bot_output(outfile, output_str):
+    'Wrapper around print for logging to outfile'
     print(output_str)
     with open(outfile, 'a') as f:
         f.write('BOT: ' + output_str + '\n')
-
-def bot_input_ready_for_correction(outfile, trucks_info, prompt_str):
-    input_str = bot_input(outfile, trucks_info, prompt_str)
-    if(blandify_str(input_str) == 'start over'):
-        # Reset
-        trucks_info.start_over()
-        return ask_trucks_start
-
-    if(blandify_str(input_str).startswith('correct ')):
-        for i, b in enumerate(trucks_info.brands_list):
-            if blandify_str(input_str)[8:] == blandify_str(b):
-                # Reset
-                trucks_info.start_over_brand(i)
-                return make_ask_brand_trucks(trucks_info, i)
-        print("I did not recognize the brand you want to correct.")
-
-    return input_str
 
 # BOT DIALOGUE FUNCTIONS
 # All dialogue functions save data in trucks_info
 # Every dialogue function returns the function where the conversation flows next
 
-def ask_name_company(trucks_info):
-    'Asks for name and company information'
-    trucks_info.name = bot_input(log_file, "Hello, what's your name? ")
-    trucks_info.company = bot_input(log_file, f"Hi {trucks_info.name}, what's the name of your company? ")
+def ask_name(trucks_info):
+    'Asks for name'
+    name = bot_input(log_file, "Hello, what's your name? ")
+    try:
+        name = sanitize_str(name)
+    except ValueError:
+        bot_output(log_file, "You can tell me your name, we are GDPR-compliant.")
+        return ask_name
 
-    return ask_trucks       # Next action: Ask about trucks
+    trucks_info.name = name
+    return ask_company # Next action: Ask about company
+
+def ask_company(trucks_info):
+    'Asks for company name'
+    company = bot_input(log_file, f"Hi {trucks_info.name}, what's the name of your company? ")
+    try:
+        company = sanitize_str(company)
+    except ValueError:
+        bot_output(log_file, "You can tell me your company name, we are GDPR-compliant.")
+        return ask_company
+
+    trucks_info.company = company
+    return ask_trucks # Next action: Ask about trucks
+
 
 def ask_trucks(trucks_info):
     'Asks whether user owns trucks'
@@ -184,6 +186,10 @@ def ask_brands(trucks_info):
     answer_brands = bot_input(log_file, f"What brands are they? ")
     brands_matches = find_brand(answer_brands, brands_list)
     if len(brands_matches) > 0:
+        if len(brands_matches) > trucks_info.n_trucks:
+            bot_output(log_file, "You seem to have more brands than trucks! Let's try again!")
+            return ask_how_many
+            
         bot_output(log_file, 'I understand you have the following brands: ' + ', '.join(brands_matches))
         trucks_info.brands_list = brands_matches
         return ask_trucks_start # Next action: Start asking about trucks
@@ -212,11 +218,8 @@ def ask_trucks_start(trucks_info):
     'Starts asking about trucks'
     bot_output(log_file, f"I will now ask you about your trucks. If you want to start over from here, tell me to 'start over'")
 
-    # Now that we know number of brands, we can initialize these
-    trucks_info.n_trucks_brand = [None] * len(trucks_info.brands_list)
-    trucks_info.brand_same_model = [None] * len(trucks_info.brands_list)
-    trucks_info.brand_models = [[]] * len(trucks_info.brands_list)
-    trucks_info.completeness = [0] * len(trucks_info.brands_list)
+    # (Re)set members
+    trucks_info.start_over()
 
     return make_ask_brand_trucks(trucks_info, 0) # Next action: Ask about first truck brand
 
@@ -226,23 +229,21 @@ def make_ask_brand_trucks(trucks_info, i_brand):
         'Asks about i_brand-th brand'
         brand = trucks_info.brands_list[i_brand]
 
-        # (Re)set variables
-        trucks_info.n_trucks_brand[i_brand] = None
-        trucks_info.brand_same_model[i_brand] = None
-        trucks_info.brand_models[i_brand] = []
-        trucks_info.completeness[i_brand] = 0
+        # (Re)set members
+        trucks_info.start_over_brand(i_brand)
 
         bot_output(log_file, f"I will now ask you about your {brand} trucks. If you want to correct your input for your {brand} trucks, tell me 'correct {brand}'")
 
-        if(len(trucks_info.brands_list) == 1):  # We don't need to ask if we only have one brand
+        if(len(trucks_info.brands_list) == 1): # We don't need to ask if we only have one brand
             bot_output(log_file, f"It seems that all your {trucks_info.n_trucks} trucks are {brand} trucks.")
             trucks_info.n_trucks_brand[i_brand] = trucks_info.n_trucks
         else:
             trucks_brand = bot_input(log_file, f"How many {brand} trucks do you have? ")
 
-            # Check for correction
-            if check_for_correction(trucks_info, trucks_brand):
-                return check_for_correction(trucks_info, trucks_brand)
+            # Jump back if requested
+            correction_maybe = check_for_correction(trucks_info, trucks_brand)
+            if correction_maybe:
+                return correction_maybe
 
             # Sanitizing for integer input (Number of trucks per brand)
             try:
@@ -278,14 +279,16 @@ def make_ask_same_model(trucks_info, i_brand):
         brand = trucks_info.brands_list[i_brand]
 
         same_model_yes_no = bot_input(log_file, f"Are your {brand} trucks of the same model? ")
-        # Check for correction
-        if check_for_correction(trucks_info, same_model_yes_no):
-            return check_for_correction(trucks_info, same_model_yes_no)
 
-        if is_yes_answer(same_model_yes_no):
+        # Jump back if requested
+        correction_maybe = check_for_correction(trucks_info, same_model_yes_no)
+        if correction_maybe:
+            return correction_maybe
+
+        if is_yes_answer(same_model_yes_no): # Only one model for this brand
             trucks_info.brand_same_model[i_brand] = True
             return ask_brand_models(trucks_info, i_brand) # Next action: Ask about models for that brand
-        elif is_no_answer(same_model_yes_no):
+        elif is_no_answer(same_model_yes_no): # More than one model for this brand
             trucks_info.brand_same_model[i_brand] = False
             return ask_brand_models(trucks_info, i_brand) # Next action: Ask about models for that brand
         else:
@@ -295,34 +298,47 @@ def make_ask_same_model(trucks_info, i_brand):
     return ask_same_model
 
 def ask_brand_models(trucks_info, i_brand):
+    'Asks about the model for a brand'
     brand = trucks_info.brands_list[i_brand]
-    if trucks_info.brand_same_model[i_brand]:
+    if trucks_info.brand_same_model[i_brand]: # Only one model
         next_model = bot_input(log_file, f"What is the model of your {brand} trucks? ")
-    else:
+        try:
+            next_model = sanitize_str(next_model)
+        except ValueError:
+            bot_output(log_file, "The model name can't be blank!")
+            return ask_brand_models(trucks_info, i_brand)
+
+    else: # More than one model
         next_model = bot_input(log_file, f"What is model #{len(trucks_info.brand_models[i_brand])+1} among your {brand} trucks (Answer none if you have no more models)? ")
-        if next_model in trucks_info.brand_models[i_brand]:
+        try:
+            next_model = sanitize_str(next_model)
+        except ValueError:
+            bot_output(log_file, "The model name can't be blank!")
+            return ask_brand_models(trucks_info, i_brand)
+        if next_model in trucks_info.brand_models[i_brand]: # Model was already given before
             bot_output(log_file, f"It looks like you already told me about your {brand} {next_model} model trucks! Let's try again.")
             return ask_brand_models(trucks_info, i_brand)
-       
-    # Check for correction
-    if check_for_correction(trucks_info, next_model):
-        return check_for_correction(trucks_info, next_model)
+    
+    # Jump back if requested
+    correction_maybe = check_for_correction(trucks_info, next_model)
+    if correction_maybe:
+        return correction_maybe
 
-    if not trucks_info.brand_same_model[i_brand] and is_no_answer(next_model):
-        if check_consistency(trucks_info):
-            if check_completeness(trucks_info, i_brand):
-                if len(trucks_info.brand_models[i_brand]) == 1:             # Notify user and change brand_same_model if user changed his mind
+    if not trucks_info.brand_same_model[i_brand] and is_no_answer(next_model): # User give 'none' answer - only allowed if more than one model
+        if check_consistency(trucks_info): # Check for consistency
+            if check_completeness(trucks_info, i_brand): # Check if we have all the trucks for this brand
+                if len(trucks_info.brand_models[i_brand]) == 1: # We are fine, but notify user and change brand_same_model if user changed his mind
                     bot_output(log_file, f"Before you told me you have more than one model. No problem, it's ok to change your mind.")
                     trucks_info.brand_same_model[i_brand] = True
-                return make_ask_brand_trucks(trucks_info, i_brand+1)        # Next action: Ask about next brand
-            else:
+                return make_ask_brand_trucks(trucks_info, i_brand+1) # Next action: Ask about next brand
+            else: # We are consistent, but there are still trucks outstanding
                 bot_output(log_file, f"We are missing information for brand {trucks_info.brands_list[i_brand]}!")
+        # We are inconsistent or incomplete (or both)
         bot_output(log_file, "The numbers don't add up. Let's try again.")
-        return ask_brand_models(trucks_info, i_brand)               # Next action: Repeat this one
+        return ask_brand_models(trucks_info, i_brand) # Next action: Repeat this one
     
     trucks_info.brand_models[i_brand].append(next_model)            # Add model to list of models for next prompt
     return ask_model_details(trucks_info, i_brand, next_model)      # Next action: Ask about model details
-
 
 def ask_model_details(trucks_info, i_brand, model_name):
     'Asks about model details for the model named model_name of the i_brand-th brand.'
@@ -332,8 +348,16 @@ def ask_model_details(trucks_info, i_brand, model_name):
     truck_spec.brand_idx = i_brand
     
     def ask_model_engine_size():
+        'Asks about engine size'
         engine_size_input = bot_input(log_file, f"What is the engine size for the {model_name} model [default unit: litres]? ")
-        pat = re.compile(r"^(.*)(l|litres|liters|litre|cc|cm³)?\s*$")
+
+        # Jump back if requested
+        correction_maybe = check_for_correction(trucks_info, engine_size_input)
+        if correction_maybe:
+            return correction_maybe
+
+        # Looking for a float with optional unit - either litres or cubic centimeters
+        pat = re.compile(r"^(.*?)(l|litres|liters|litre|cc|cm³)?\s*$")
         match = pat.match(engine_size_input)
         if match is None:
             bot_output(log_file, "Engine size must given as number with optional unit - either cc or litres")
@@ -343,106 +367,148 @@ def ask_model_details(trucks_info, i_brand, model_name):
             engine_size = sanitize_float(match.group(1))
         except ValueError:
             bot_output(log_file, "That does not look like a number to me. Let's try again.")
-            return ask_model_engine_size # Next action: ask again about number of trucks
+            return ask_model_engine_size # Next action: ask again about engine size
 
+        # Convert if necessary
         conversion_factor = 0.001 if match.group(2) in ["cc", "cm³"] else 1
         engine_size = engine_size * conversion_factor
 
         if engine_size < 1 or engine_size > 20:
             bot_output(log_file, "Engine size seems to be too high or low, please check!")
-            return ask_model_engine_size
+            return ask_model_engine_size # Next action: ask again about engine size
 
         truck_spec.engine_size = engine_size
-        return None
+        return None # Next action: Done asking about this.
 
     def ask_model_axle_number():
+        'Ask about number of axles'
+        axle_numer_input = bot_input(log_file, f"How many axles does the {model_name} model have? ")
+
+        # Jump back if requested
+        correction_maybe = check_for_correction(trucks_info, axle_numer_input)
+        if correction_maybe:
+            return correction_maybe
+
         try:
-            axle_number = sanitize_int(bot_input(log_file, f"How many axles does the {model_name} model have? "))
-            if axle_number < 1 or axle_number > 6:
-                bot_output(log_file, "Number of axles seems to be too high or low, please check!")
-                return ask_model_axle_number
-            else:
-                truck_spec.axle_number = axle_number
-                return None               # Next action: Done
+            axle_number = sanitize_int(axle_numer_input)
         except ValueError:
             bot_output(log_file, "That does not look like a number to me. Let's try again.")
-            return ask_model_axle_number # Next action: ask again about number of trucks
+            return ask_model_axle_number # Next action: ask again about number of axles
+        
+        if axle_number < 1 or axle_number > 6:
+            bot_output(log_file, "Number of axles seems to be too high or low, please check!")
+            return ask_model_axle_number # Next action: ask again about number of axles
+        else:
+            truck_spec.axle_number = axle_number
+            return None # Next action: Done
 
     def ask_model_weight():
+        'Ask about weight'
+        weight_input = bot_input(log_file, f"How much does the {model_name} weigh (in tons)? ")
+
+        # Jump back if requested
+        correction_maybe = check_for_correction(trucks_info, weight_input)
+        if correction_maybe:
+            return correction_maybe
+
+        # Looking for a float with optional unit (tons)
+        pat = re.compile(r"^(.*?)(t|ton|tons)?\s*$")
+        weight_input = pat.match(weight_input).group(1)
+
         try:
-            weight_input = bot_input(log_file, f"How much does the {model_name} weigh (in tons)? ")
-            pat = re.compile(r"^(.*)(t|tons)?\s*$")
-            weight_input = pat.match(weight_input).group(1)     
             weight = sanitize_float(weight_input)
-            if weight < 0 or weight > 80:
-                bot_output(log_file, "Weight seems to be too high or low, please check!")
-                return ask_model_weight
-            else:
-                truck_spec.weight = weight
-                return None               # Next action: Done
         except ValueError:
             bot_output(log_file, "That does not look like a number to me. Let's try again.")
-            return ask_model_weight # Next action: ask again about number of trucks
+            return ask_model_weight # Next action: Ask again
+
+        if weight < 0 or weight > 80:
+            bot_output(log_file, "Weight seems to be too high or low, please check!")
+            return ask_model_weight # Nex action: Ask again
+        else:
+            truck_spec.weight = weight
+            return None # Next action: Done asking about this
 
     def ask_model_max_load():
+        'Ask about max load'
+        max_load_input = bot_input(log_file, f"What is the max load for the {model_name} model (in tons)? ")
+
+        # Jump back if requested
+        correction_maybe = check_for_correction(trucks_info, max_load_input)
+        if correction_maybe:
+            return correction_maybe
+
+        # Looking for a float with optional unit (tons)
+        pat = re.compile(r"^(.*?)(t|ton|tons)?\s*$")
+        max_load_input = pat.match(max_load_input).group(1)
+
         try:
-            max_load_input = bot_input(log_file, f"What is the max load for the {model_name} model (in tons)? ")
-            pat = re.compile(r"^(.*)(t|tons)?\s*$")
-            max_load_input = pat.match(max_load_input).group(1)     
             max_load = sanitize_float(max_load_input)
-            if max_load < 0 or max_load > 80:
-                bot_output(log_file, "Max load seems to be too high or low, please check!")
-                return ask_model_max_load
-            else:
-                truck_spec.max_load = max_load
-                return None               # Next action: Done
         except ValueError:
             bot_output(log_file, "That does not look like a number to me. Let's try again.")
-            return ask_model_max_load # Next action: ask again about number of trucks
+            return ask_model_max_load # Next action: Ask again
+
+        if max_load < 0 or max_load > 80:
+            bot_output(log_file, "Max load seems to be too high or low, please check!")
+            return ask_model_max_load # Next action: Ask again
+        else:
+            truck_spec.max_load = max_load
+            return None # Next action: Done asking about this
 
     def ask_model_how_many():
-        if trucks_info.brand_same_model[i_brand]:
+        'Record number of trucks for this model'
+        if trucks_info.brand_same_model[i_brand]: # If this is the only model, we already know this
             trucks_info.trucks_list.append((truck_spec, trucks_info.n_trucks_brand[i_brand]))
         else:
+            model_how_many_input = bot_input(log_file, f"How many {truck_spec.brand} {model_name} trucks do you have? ")
+
+            # Jump back if requested
+            correction_maybe = check_for_correction(trucks_info, model_how_many_input)
+            if correction_maybe:
+                return correction_maybe
+
             try:
-                model_how_many = sanitize_int(bot_input(log_file, f"How many {truck_spec.brand} {model_name} trucks do you have? "))
-
-                # Check whether that number is logically too high or too low
-                if model_how_many + trucks_info.completeness[i_brand] > trucks_info.n_trucks_brand[i_brand]:
-                    bot_output(log_file, "That's too many, the numbers don't add up. Let's try again.")
-                    return ask_model_how_many
-
-                if model_how_many <= 0:
-                    bot_output(log_file, "I expected a positive number of trucks. Let's try again.")
-                    return ask_model_how_many
-
-                if trucks_info.brand_same_model[i_brand] and model_how_many + trucks_info.completeness[i_brand] < trucks_info.n_trucks_brand[i_brand]:
-                    bot_output(log_file, "That's not enough, the numbers don't add up. Let's try again.")
-                    return ask_model_how_many
-
-                trucks_info.trucks_list.append((truck_spec, model_how_many))
-                trucks_info.completeness[i_brand] += model_how_many
-                return None               # Next action: Done
+                model_how_many = sanitize_int(model_how_many_input)
             except ValueError:
                 bot_output(log_file, "That does not look like a number to me. Let's try again.")
-                return ask_model_how_many # Next action: ask again about number of trucks
+                return ask_model_how_many # Next action: Ask again
 
+            # Check whether that number is logically too high
+            if model_how_many + trucks_info.completeness[i_brand] > trucks_info.n_trucks_brand[i_brand]:
+                bot_output(log_file, "That's too many, the numbers don't add up. Let's try again.")
+                return ask_model_how_many # Next action: Ask again
+
+            # Check whether number is postive
+            if model_how_many <= 0:
+                bot_output(log_file, "I expected a positive number of trucks. Let's try again.")
+                return ask_model_how_many # Next action: Ask again
+
+            # Check whether that number is logically too low
+            if trucks_info.brand_same_model[i_brand] and model_how_many + trucks_info.completeness[i_brand] < trucks_info.n_trucks_brand[i_brand]:
+                bot_output(log_file, "That's not enough, the numbers don't add up. Let's try again.")
+                return ask_model_how_many # Next action: Ask again
+
+            trucks_info.trucks_list.append((truck_spec, model_how_many))
+            trucks_info.completeness[i_brand] += model_how_many
+
+            return None # Next action: Done asking about this
+
+    # Go through the sub-questions
     for f in [ask_model_engine_size, ask_model_axle_number, ask_model_weight, ask_model_max_load, ask_model_how_many]:
         next_action = f()
         while next_action:
             next_action = next_action()
 
-    if trucks_info.brand_same_model[i_brand]:
-        return make_ask_brand_trucks(trucks_info, i_brand+1)        # Next action: Ask about next models for next brand
+    if trucks_info.brand_same_model[i_brand]: # If this is the only model, we can ask about the next brand
+        return make_ask_brand_trucks(trucks_info, i_brand+1) # Next action: Ask about next models for next brand
     else:
-        if not check_completeness(trucks_info, i_brand):
-            return ask_brand_models(trucks_info, i_brand)           # Next action: Ask about next model for same brand
+        if not check_completeness(trucks_info, i_brand): # If there are still trucks left for this brand, keep asking about next model
+            return ask_brand_models(trucks_info, i_brand) # Next action: Ask about next model for same brand
         else:
+            # No trucks left for this brand - check whether user mistakenly specified only one model in beginning
             if not trucks_info.brand_same_model[i_brand] and len(trucks_info.brand_models[i_brand]) == 1: # Notify user and change brand_same_model if user changed his mind
                 bot_output(log_file, f"Before you told me you have more than one model. No problem, it's ok to change your mind.")
                 trucks_info.brand_same_model[i_brand] = True
-            return make_ask_brand_trucks(trucks_info, i_brand+1)     # Next action: Ask about next models for next brand
-
+            return make_ask_brand_trucks(trucks_info, i_brand+1) # Next action: Ask about next models for next brand
 
 def check_consistency(trucks_info):
     'This function checks for consistency while the data is collected. As soon as an inconsistency arises during the process, this function will return False.'
@@ -477,7 +543,10 @@ def check_consistency(trucks_info):
     return True    
 
 def check_completeness(trucks_info, i_brand):
-    'Checks whether we have collected all the info about models for brand given by i_brand. This check is needed because the chatbot can go back and forth between questions.'
+    ''''
+    Checks whether we have collected all the info about models for brand given by i_brand.
+    This check is needed because the chatbot can go back and forth between questions, and skip unneeded questions.
+    '''
     if trucks_info.completeness[i_brand] == trucks_info.n_trucks_brand[i_brand]:
         return True
     else:
@@ -485,7 +554,7 @@ def check_completeness(trucks_info, i_brand):
 
 # Initialize next_action (telling chatbot what to do next) and
 # trucks_info (holding trucks information until we write it to disk)
-next_action = ask_name_company
+next_action = ask_name
 trucks_info = TrucksInfo()
 while next_action:
     next_action = next_action(trucks_info)

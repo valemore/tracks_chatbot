@@ -47,6 +47,14 @@ def sanitize_float(x_str):
             raise ValueError # Raise ValueError for our chatbot to catch
     return x
 
+def sanitize_str(s_str):
+    'Make sure string is not empty.'
+    s_str = s_str.strip()
+    if s_str == '':
+        raise ValueError # Raise ValueError for our chatbot to catch
+    # Could also add ability to deal with German-style floats
+    return s_str
+
 def blandify_str(s):
     'Convert a string to lowercase and replace special characters.'
     special_chars = '-,_.;:!"\'$%^&*()=+[]{}\\/?<>|'
