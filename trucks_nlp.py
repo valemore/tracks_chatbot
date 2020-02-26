@@ -1,6 +1,11 @@
 # This file does some basic language stuff
 
 import inflect
+from fuzzywuzzy import fuzz
+
+# Minimum ratios for fuzzy brand matching
+min_fuzzy_ratio = 80       # 
+#min_token_sort_ratio = 100 # Should match all the tokens
 
 # Some alternatives for yes/no answers
 yes_answers = ["yes", "y", "yep", "yup", "ya", "ja", "sure"]
@@ -81,12 +86,24 @@ def get_brands(brands_file):
         brands_list = [ l.rstrip('\n') for l in f ]
     return brands_list
 
+def fuzzy_match(s, brand):
+    'Does fuzzy matching between string s and brand. Returns score, or -1 if no match'
+    fuzz_ratio = fuzz.ratio(s, brand)
+    if fuzz_ratio > min_fuzzy_ratio:
+        return fuzz_ratio
+    return -1
+
 def find_brand(s, brands_list):
     'Looks which brands in string s are found in brands_list.'
 
     # To get around capitalization and special character issues, all comparisons are made on lowercase ascii
     s = blandify_str(s)
     brands_list_bland = [ blandify_str(b) for b in brands_list ]
+
+    # Dict for getting back from bland brand
+    bland2brand = dict()
+    for bland, brand in zip(brands_list_bland, brands_list): # Not using comprehension b/c bland may not be unique
+        bland2brand[bland] = brand
 
     # Tokenize
     s_tokenized = s.split()
@@ -95,14 +112,22 @@ def find_brand(s, brands_list):
         # We look for largest possible group of tokens first
         for i in range(len(tokens)):
             for j in reversed(range(i+1, len(tokens)+1)):
+                best_match_score = -1
+                best_match = None
                 for idx_brand, b in enumerate(brands_list_bland):
-                    if ' '.join(tokens[i:j]) == b:
-                        # If we find a brand, continue searching recursively on remaining tokens
-                        return [brands_list[idx_brand]] + find_brand_iter(tokens[:i] + tokens[j:])
+                    # Compare candidate to b using fuzzy matching
+                    candidate = ' '.join(tokens[i:j])
+                    candidate_score = fuzzy_match(candidate, b)
+                    if candidate_score > best_match_score:
+                        best_match = b
+                        best_match_score = candidate_score
+
+                # If we found a brand, continue searching recursively on remaining tokens
+                if best_match_score > -1:
+                    return [bland2brand[best_match]] + find_brand_iter(tokens[:i] + tokens[j:])
     
         # Return empty list if no match was found
         return []
     
     result = find_brand_iter(s_tokenized)
     return list(set(result))
-

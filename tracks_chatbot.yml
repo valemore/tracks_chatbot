@@ -4,3 +4,7 @@ channels:
 dependencies:
   - python
   - inflect
+  - pip
+  - pip:
+    - python-Levenshtein
+    - fuzzywuzzy

@@ -1,9 +1,9 @@
 # Dependencies
-The bot has only one dependency (inflect), used for recognizing numbers given as text.
+The bot has three dependencies (inflect, python-Levenshtein, fuzzywuzzy), used for recognizing numbers given as text, and doing fuzzy matching.
 
 Install via
 ```
-pip install inflect
+pip install inflect, python-Levenshtein, fuzzywuzzy
 ```
 or create a conda environment
 ```
