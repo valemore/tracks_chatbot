@@ -236,7 +236,8 @@ def make_ask_brand_trucks(trucks_info, i_brand):
         bot_output(log_file, f"I will now ask you about your {brand} trucks. If you want to correct your input for your {brand} trucks, tell me 'correct {brand}'")
 
         if(len(trucks_info.brands_list) == 1): # We don't need to ask if we only have one brand
-            bot_output(log_file, f"It seems that all your {trucks_info.n_trucks} trucks are {brand} trucks.")
+            if trucks_info.n_trucks > 1:
+                bot_output(log_file, f"It seems that all your {trucks_info.n_trucks} trucks are {brand} trucks.")
             trucks_info.n_trucks_brand[i_brand] = trucks_info.n_trucks
         else:
             trucks_brand = bot_input(log_file, f"How many {brand} trucks do you have? ")
@@ -279,22 +280,26 @@ def make_ask_same_model(trucks_info, i_brand):
         'Asks about models for i_brand-th brand'
         brand = trucks_info.brands_list[i_brand]
 
-        same_model_yes_no = bot_input(log_file, f"Are your {brand} trucks of the same model? ")
+        if trucks_info.n_trucks_brand[i_brand] != 1: # If there is more than one truck, ask if they are all the same model
+            same_model_yes_no = bot_input(log_file, f"Are your {brand} trucks of the same model? ")
 
-        # Jump back if requested
-        correction_maybe = check_for_correction(trucks_info, same_model_yes_no)
-        if correction_maybe:
-            return correction_maybe
+            # Jump back if requested
+            correction_maybe = check_for_correction(trucks_info, same_model_yes_no)
+            if correction_maybe:
+                return correction_maybe
 
-        if is_yes_answer(same_model_yes_no): # Only one model for this brand
+            if is_yes_answer(same_model_yes_no): # Only one model for this brand
+                trucks_info.brand_same_model[i_brand] = True
+                return ask_brand_models(trucks_info, i_brand) # Next action: Ask about models for that brand
+            elif is_no_answer(same_model_yes_no): # More than one model for this brand
+                trucks_info.brand_same_model[i_brand] = False
+                return ask_brand_models(trucks_info, i_brand) # Next action: Ask about models for that brand
+            else:
+                bot_output(log_file, "I am not sure I understood you. Let's try again.")
+                return make_ask_same_model(trucks_info, i_brand) # Next action: Try again
+        else: # For this brand there is only one truck and one truck model
             trucks_info.brand_same_model[i_brand] = True
             return ask_brand_models(trucks_info, i_brand) # Next action: Ask about models for that brand
-        elif is_no_answer(same_model_yes_no): # More than one model for this brand
-            trucks_info.brand_same_model[i_brand] = False
-            return ask_brand_models(trucks_info, i_brand) # Next action: Ask about models for that brand
-        else:
-            bot_output(log_file, "I am not sure I understood you. Let's try again.")
-            return make_ask_same_model(trucks_info, i_brand) # Next action: Try again
     
     return ask_same_model
 
