@@ -3,7 +3,7 @@
 import inflect
 
 # Some alternatives for yes/no answers
-yes_answers = ["yes", "y", "yep", "yup", "ya", "ja"]
+yes_answers = ["yes", "y", "yep", "yup", "ya", "ja", "sure"]
 no_answers = ["no", "n", "none", "nope", "nein", "zero", "no more"]
 
 def is_yes_answer(s):
