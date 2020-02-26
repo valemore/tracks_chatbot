@@ -92,7 +92,7 @@ def fuzzy_match(s, brand):
     if fuzz_ratio > min_fuzzy_ratio:
         return fuzz_ratio
     return -1
-
+    
 def find_brand(s, brands_list):
     'Looks which brands in string s are found in brands_list.'
 
@@ -117,7 +117,16 @@ def find_brand(s, brands_list):
                 for idx_brand, b in enumerate(brands_list_bland):
                     # Compare candidate to b using fuzzy matching
                     candidate = ' '.join(tokens[i:j])
-                    candidate_score = fuzzy_match(candidate, b)
+                    # Only do fuzzy matching if string length > 4
+                    # This is to prevent mistakes e.g. for abbreviations and prevent mismatching of common short words
+                    if len(candidate) > 4:
+                        candidate_score = fuzzy_match(candidate, b)
+                    else: # Else do exact matching
+                        if(candidate == b):
+                            return [bland2brand[b]] + find_brand_iter(tokens[:i] + tokens[j:])
+                        else:
+                            candidate_score = -1
+
                     if candidate_score > best_match_score:
                         best_match = b
                         best_match_score = candidate_score
