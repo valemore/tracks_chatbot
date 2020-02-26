@@ -183,7 +183,8 @@ def ask_how_many(trucks_info):
 def ask_brands(trucks_info):
     'Asks about brands'
     brands_list = get_brands(brands_file)
-    answer_brands = bot_input(log_file, f"What brands are they? ")
+    prompt = "What brands are they? " if trucks_info.n_trucks > 1 else "What brand is your truck? "
+    answer_brands = bot_input(log_file, prompt)
     brands_matches = find_brand(answer_brands, brands_list)
     if len(brands_matches) > 0:
         if len(brands_matches) > trucks_info.n_trucks:
