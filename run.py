@@ -183,7 +183,7 @@ def ask_how_many(trucks_info):
 def ask_brands(trucks_info):
     'Asks about brands'
     brands_list = get_brands(brands_file)
-    prompt = "What brands are they? " if trucks_info.n_trucks > 1 else "What brand is your truck? "
+    prompt = "What brands are your trucks? " if trucks_info.n_trucks > 1 else "What brand is your truck? "
     answer_brands = bot_input(log_file, prompt)
     brands_matches = find_brand(answer_brands, brands_list)
     if len(brands_matches) > 0:
@@ -195,8 +195,44 @@ def ask_brands(trucks_info):
         trucks_info.brands_list = brands_matches
         return ask_trucks_start # Next action: Start asking about trucks
     else:
-        bot_output(log_file, "I did not recognize any brand name. Let's try again.")
-        return ask_brands # Next action: Repeat this question
+        return ask_add_brand # Next action: Ask about adding a brand
+
+def ask_add_brand(trucks_info):
+    'Asks user if he wants to add a brand'
+    add_brand_yesno = bot_input(log_file, "I did not recognize any brand name. Do you want me to add a brand to the database? ")
+    if is_yes_answer(add_brand_yesno):
+        return prompt_new_brand # Next action: Prompt for new brand
+    elif is_no_answer(add_brand_yesno):
+        return ask_brands # Next action: Ask again for brands
+    else:
+        bot_output(log_file, "I am not sure I understood you. Let's try again.")
+        return ask_add_brand # Next action: Repeat this one
+
+def prompt_new_brand(trucks_info):
+    'Prompts user for new brand and adds it to the brands file'
+    new_brand = bot_input(log_file, "Which name should I add to the brand database? Answer 'none' if you changed your mind. ")
+    try:
+        new_brand = sanitize_str(new_brand)
+    except ValueError:
+        bot_output(log_file, "The brand name can't be blank!")
+        return prompt_new_brand # Next action: Repeat question
+
+    # Check for none answer
+    if is_no_answer(new_brand):
+        return ask_brands
+
+    # Check if we already know this brand
+    brands_list = get_brands(brands_file)
+    if blandify_str(new_brand) in [blandify_str(b) for b in brands_list]:
+        bot_output(log_file, "I already know this brand!")
+        return prompt_new_brand
+    else: # Add brand
+        with open(brands_file, 'a') as f:
+            f.write(new_brand + '\n')
+        bot_output(log_file, f"Added brand {new_brand} to brans database in {brands_file}.")
+        return ask_brands
+
+
 
 def check_for_correction(trucks_info, input_str):
     "If input is either 'start over' or 'correct <brand>', reset and return respective function. Otherwise return False."
